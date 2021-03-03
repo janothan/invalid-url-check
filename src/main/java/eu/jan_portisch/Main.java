@@ -137,6 +137,7 @@ public class Main {
             try {
                 URL url = new URL(link);
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("HEAD");
                 int responseCode = connection.getResponseCode();
                 if (responseCode != HttpURLConnection.HTTP_OK
                         && responseCode != HttpURLConnection.HTTP_MOVED_PERM

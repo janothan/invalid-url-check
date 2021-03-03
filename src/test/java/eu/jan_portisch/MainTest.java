@@ -33,7 +33,6 @@ class MainTest {
         } catch (Exception e) {
             fail();
         }
-
     }
 
     @Test
