@@ -1,5 +1,6 @@
 package eu.jan_portisch;
 
+import org.apache.commons.cli.*;
 import org.javatuples.Pair;
 import org.nibor.autolink.LinkExtractor;
 import org.nibor.autolink.LinkSpan;
@@ -10,21 +11,45 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.EnumSet;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 
 
 public class Main {
 
-    private static final boolean onlyMarkdownLinks = true;
+
+    /**
+     * If true only md files are parsed and only md links are checked.
+     */
+    private static boolean isOnlyMarkdownLinks = false;
 
     public static void main(String[] args) {
-        // Sanity Check
-        if (!isArgsOk(args)) {
+        Options options = new Options();
+        Option dirOption = new Option("dir", "directory", true, "The directory or file that shall be checked.");
+        dirOption.setOptionalArg(false);
+        Option mdOption = new Option("md", "markdown", false, "Only markdown files will be parsed and only markdown links will be checked.");
+        mdOption.setOptionalArg(true);
+        options.addOption(dirOption);
+        options.addOption(mdOption);
+
+        String directoryPath;
+        try {
+            CommandLineParser parser = new DefaultParser();
+            CommandLine cmd = parser.parse(options, args);
+            directoryPath = cmd.getOptionValue("dir");
+
+            if(cmd.hasOption("md")){
+                isOnlyMarkdownLinks = true;
+            }
+
+        } catch (ParseException | NullPointerException e){
+            System.out.println("Problem while parsing the arguments.");
+            HelpFormatter formatter = new HelpFormatter();
+            formatter.printHelp("posix", options);
             System.exit(1);
             return;
         }
-        File root = new File(args[0]);
+
+        File root = new File(directoryPath);
 
         // case 1: root is a file
         if (root.isFile()) {
@@ -64,6 +89,9 @@ public class Main {
 
     static boolean isFileOk(File file) {
         try {
+            if(isOnlyMarkdownLinks && !file.getName().endsWith(".md")){
+                return true;
+            }
             Set<String> linkSet = new HashSet<>();
             BufferedReader reader = new BufferedReader(new FileReader(file));
             String line;
@@ -73,11 +101,9 @@ public class Main {
 
             // let's crawl all URLs
             while ((line = reader.readLine()) != null) {
-                Iterator<LinkSpan> iterator = linkExtractor.extractLinks(line).iterator();
-                while (iterator.hasNext()) {
-                    LinkSpan link = iterator.next();
-                    if (onlyMarkdownLinks) {
-                        if (line.substring(link.getBeginIndex() - 1, link.getBeginIndex()).equals("(") && line.substring(link.getEndIndex(), link.getEndIndex() + 1).equals(")")) {
+                for (LinkSpan link : linkExtractor.extractLinks(line)) {
+                    if (isOnlyMarkdownLinks) {
+                        if (line.charAt(link.getBeginIndex() - 1) == '(' && line.charAt(link.getEndIndex()) == ')') {
                             linkSet.add(line.substring(link.getBeginIndex(), link.getEndIndex()));
                         }
                     } else {
@@ -104,7 +130,6 @@ public class Main {
         }
     }
 
-
     static Pair<Boolean, Set<String>> isLinkSetOk(Set<String> linkSet) {
         boolean result = true;
         Set<String> errorUrls = new HashSet<>();
@@ -127,26 +152,4 @@ public class Main {
         }
         return new Pair(result, errorUrls);
     }
-
-
-    /**
-     * Just some sanity checks...
-     *
-     * @param args The main args.
-     * @return False if args is not ok, else true.
-     */
-    private static boolean isArgsOk(String[] args) {
-        if (args == null || args.length == 0) {
-            System.out.println("Please provide a directory/file.");
-            return false;
-        }
-        File file = new File(args[0]);
-        if (!file.exists()) {
-            System.out.println("The provided file/directory does not exist. Please provide an existing directory/file.");
-            return false;
-        }
-        return true;
-    }
-
-
 }

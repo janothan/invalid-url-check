@@ -10,6 +10,7 @@ import java.net.URISyntaxException;
 import java.util.HashSet;
 import java.util.Set;
 
+import static com.github.stefanbirkner.systemlambda.SystemLambda.catchSystemExit;
 import static org.junit.jupiter.api.Assertions.*;
 
 class MainTest {
@@ -21,21 +22,68 @@ class MainTest {
     }
 
     @Test
-    void mainOk(){
-        String[] args1 = new String[1];
-        args1[0] = loadFile("myOkRootDir").getAbsolutePath();
-        Main.main(args1);
+    void help() {
+        String[] args1 = new String[2];
+
+        try {
+            int statusCode = catchSystemExit(() -> {
+                Main.main(args1);
+            });
+            assertEquals(1, statusCode);
+        } catch (Exception e) {
+            fail();
+        }
+
     }
 
     @Test
-    void mainNotOk(){
-        String[] args1 = new String[1];
-        args1[0] = loadFile("myOkRootDirNotOk").getAbsolutePath();
-        Main.main(args1);
+    void mainOk() {
+        try {
+            String[] args1 = new String[2];
+            args1[0] = "-dir";
+            args1[1] = loadFile("myOkRootDir").getAbsolutePath();
+            int statusCode = catchSystemExit(() -> {
+                Main.main(args1);
+            });
+            assertEquals(0, statusCode);
+        } catch (Exception e) {
+            fail();
+        }
     }
 
     @Test
-    void isLinkSetOk(){
+    void mainNotOkAll() {
+        String[] args1 = new String[2];
+        args1[0] = "-dir";
+        args1[1] = loadFile("myNotOkRootDir").getAbsolutePath();
+        try {
+            int statusCode = catchSystemExit(() -> {
+                Main.main(args1);
+            });
+            assertEquals(1, statusCode);
+        } catch (Exception e) {
+            fail();
+        }
+    }
+
+    @Test
+    void mainNotOkButMdOk() {
+        String[] args1 = new String[3];
+        args1[0] = "-dir";
+        args1[1] = loadFile("myNotOkRootDir").getAbsolutePath();
+        args1[2] = "-md";
+        try {
+            int statusCode = catchSystemExit(() -> {
+                Main.main(args1);
+            });
+            assertEquals(0, statusCode);
+        } catch (Exception e) {
+            fail();
+        }
+    }
+
+    @Test
+    void isLinkSetOk() {
         Set<String> linkSet1 = new HashSet<>();
         linkSet1.add("https://www.jan-portisch.eu/");
         linkSet1.add("https://www.wikidata.org/");
