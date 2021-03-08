@@ -9,6 +9,7 @@ import org.nibor.autolink.LinkType;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Set;
@@ -37,12 +38,15 @@ public class Main {
             CommandLine cmd = parser.parse(options, args);
             directoryPath = cmd.getOptionValue("dir");
 
-            if(cmd.hasOption("md")){
+            if (cmd.hasOption("md")) {
                 isOnlyMarkdownLinks = true;
+            } else {
+                // this is required for repeated unit testing
+                isOnlyMarkdownLinks = false;
             }
 
-        } catch (ParseException | NullPointerException e){
-            System.out.println("Problem while parsing the arguments.");
+        } catch (ParseException | NullPointerException e) {
+            System.out.println("Problem wwhile parsing the arguments.");
             HelpFormatter formatter = new HelpFormatter();
             formatter.printHelp("posix", options);
             System.exit(1);
@@ -57,18 +61,23 @@ public class Main {
                 System.exit(1);
                 return;
             }
-        }
-
-        // case 2: root is a directory
-        if (!isDirectoryOk(root)) {
-            System.exit(1);
-            return;
+        } else {
+            // case 2: root is a directory
+            if (!isDirectoryOk(root)) {
+                System.exit(1);
+                return;
+            }
         }
 
         System.exit(0);
     }
 
-
+    /**
+     * Recursively checks all files in the specified directory. The method will check the file, if a file is provided
+     * instead of a directory.
+     * @param directoryOrFile File or directory.
+     * @return True if file is ok, else false.
+     */
     static boolean isDirectoryOk(File directoryOrFile) {
         boolean result = true;
         if (directoryOrFile.isDirectory()) {
@@ -89,7 +98,7 @@ public class Main {
 
     static boolean isFileOk(File file) {
         try {
-            if(isOnlyMarkdownLinks && !file.getName().endsWith(".md")){
+            if (isOnlyMarkdownLinks && !file.getName().endsWith(".md")) {
                 return true;
             }
             Set<String> linkSet = new HashSet<>();
@@ -99,12 +108,17 @@ public class Main {
                     .linkTypes(EnumSet.of(LinkType.URL, LinkType.WWW))
                     .build();
 
+            ArrayList<String> warnings = new ArrayList<>();
             // let's crawl all URLs
             while ((line = reader.readLine()) != null) {
                 for (LinkSpan link : linkExtractor.extractLinks(line)) {
                     if (isOnlyMarkdownLinks) {
-                        if (line.charAt(link.getBeginIndex() - 1) == '(' && line.charAt(link.getEndIndex()) == ')') {
-                            linkSet.add(line.substring(link.getBeginIndex(), link.getEndIndex()));
+                        try {
+                            if (line.charAt(link.getBeginIndex() - 1) == '(' && line.charAt(link.getEndIndex()) == ')') {
+                                linkSet.add(line.substring(link.getBeginIndex(), link.getEndIndex()));
+                            }
+                        } catch (StringIndexOutOfBoundsException e){
+                            warnings.add("\tMissing brackets in line: '" + line + "' ⚠️");
                         }
                     } else {
                         linkSet.add(line.substring(link.getBeginIndex(), link.getEndIndex()));
@@ -122,6 +136,17 @@ public class Main {
                     System.out.println("\t" + s);
                 }
             }
+            if(result.getValue1().size() > 0){
+                for (String s : result.getValue1()) {
+                    System.out.println("\t" + s + " ⚠️ [Problem with URL]");
+                }
+            }
+            if(warnings.size() > 0){
+                for(String s : warnings){
+                    System.out.println(s);
+                }
+            }
+
             return result.getValue0();
         } catch (IOException e) {
             System.out.println("Problem while processing file: " + file.getAbsolutePath());
@@ -147,7 +172,6 @@ public class Main {
                     result = false;
                 }
             } catch (IOException e) {
-                System.out.println("[ERROR] Problem with URL: " + link);
                 errorUrls.add(link);
             }
         }

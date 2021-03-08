@@ -5,8 +5,7 @@ import org.javatuples.Pair;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
-import java.net.MalformedURLException;
-import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -15,6 +14,57 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class MainTest {
 
+
+    @Test
+    void checkProblematicDirMainMd(){
+        try {
+            String[] args1 = new String[3];
+            args1[0] = "-dir";
+            args1[1] = loadFile("debug_ioobe").getAbsolutePath();
+            args1[2] = "-md";
+            int statusCode = catchSystemExit(() -> {
+                Main.main(args1);
+            });
+            assertEquals(0, statusCode);
+        } catch (Exception e) {
+            e.printStackTrace();
+            fail();
+        }
+    }
+
+    @Test
+    void checkSingleFileMainMd(){
+        try {
+            String[] args1 = new String[3];
+            args1[0] = "-dir";
+            args1[1] = loadFile("file_no_link.md").getAbsolutePath();
+            args1[2] = "-md";
+            int statusCode = catchSystemExit(() -> {
+                Main.main(args1);
+            });
+            assertEquals(0, statusCode);
+        } catch (Exception e) {
+            e.printStackTrace();
+            fail();
+        }
+    }
+
+    @Test
+    void checkSingleFileMainMd2(){
+        try {
+            String[] args1 = new String[3];
+            args1[0] = "-dir";
+            args1[1] = loadFile("error_file.md").getAbsolutePath();
+            args1[2] = "-md";
+            int statusCode = catchSystemExit(() -> {
+                Main.main(args1);
+            });
+            assertEquals(0, statusCode);
+        } catch (Exception e) {
+            e.printStackTrace();
+            fail();
+        }
+    }
 
     @Test
     void isFileOk() {
@@ -105,14 +155,14 @@ class MainTest {
      */
     private File loadFile(String fileName) {
         try {
-            File result = FileUtils.toFile(this.getClass().getClassLoader().getResource(fileName).toURI().toURL());
+            URL fileUrl = this.getClass().getClassLoader().getResource(fileName);
+            File result = FileUtils.toFile(fileUrl);
             assertTrue(result.exists(), "Required resource not available.");
             return result;
-        } catch (URISyntaxException | MalformedURLException exception) {
+        } catch (Exception exception) {
             exception.printStackTrace();
             fail("Could not load file.");
             return null;
         }
     }
-
 }
