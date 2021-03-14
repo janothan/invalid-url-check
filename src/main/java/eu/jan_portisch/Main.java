@@ -2,13 +2,18 @@ package eu.jan_portisch;
 
 import org.apache.commons.cli.*;
 import org.javatuples.Pair;
+import org.javatuples.Triplet;
 import org.nibor.autolink.LinkExtractor;
 import org.nibor.autolink.LinkSpan;
 import org.nibor.autolink.LinkType;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLSession;
+
 import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.*;
+
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -46,7 +51,7 @@ public class Main {
             }
 
         } catch (ParseException | NullPointerException e) {
-            System.out.println("Problem wwhile parsing the arguments.");
+            System.out.println("Problem while parsing the arguments.");
             HelpFormatter formatter = new HelpFormatter();
             formatter.printHelp("posix", options);
             System.exit(1);
@@ -127,17 +132,17 @@ public class Main {
 
             }
             reader.close();
-            Pair<Boolean, Set<String>> result = isLinkSetOk(linkSet);
+            Triplet<Boolean, Set<String>, Set<String>> result = isLinkSetOk(linkSet);
             if (result.getValue0()) {
                 System.out.println(file.getAbsolutePath() + "  ✅️");
             } else {
                 System.out.println(file.getAbsolutePath() + "  ❌️");
                 for (String s : result.getValue1()) {
-                    System.out.println("\t" + s);
+                    System.out.println("\t" + s + " ❌ [Invalid URL]");
                 }
             }
-            if(result.getValue1().size() > 0){
-                for (String s : result.getValue1()) {
+            if(result.getValue2().size() > 0){
+                for (String s : result.getValue2()) {
                     System.out.println("\t" + s + " ⚠️ [Problem with URL]");
                 }
             }
@@ -155,26 +160,64 @@ public class Main {
         }
     }
 
-    static Pair<Boolean, Set<String>> isLinkSetOk(Set<String> linkSet) {
+    /**
+     * Check a set of links.
+     * @param linkSet The set of links to be checked.
+     * @return Pair where
+     * [0] bool indicating whether the link set is ok
+     * [1] URLs that are not ok
+     * [2] URLs that produce some warning.
+     */
+    static Triplet<Boolean, Set<String>, Set<String>> isLinkSetOk(Set<String> linkSet) {
         boolean result = true;
         Set<String> errorUrls = new HashSet<>();
+        Set<String> warnUrls = new HashSet<>();
         for (String link : linkSet) {
-            try {
-                URL url = new URL(link);
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                connection.setRequestMethod("HEAD");
-                int responseCode = connection.getResponseCode();
-                if (responseCode != HttpURLConnection.HTTP_OK
-                        && responseCode != HttpURLConnection.HTTP_MOVED_PERM
-                        && responseCode != HttpURLConnection.HTTP_MOVED_TEMP
-                        && responseCode != HttpURLConnection.HTTP_FORBIDDEN) {
-                    errorUrls.add(link);
-                    result = false;
-                }
-            } catch (IOException e) {
-                errorUrls.add(link);
-            }
+           switch (isLinkOk(link)){
+               case OK:
+                   continue;
+               case WARN:
+                   warnUrls.add(link);
+                   break;
+               case ERROR:
+                   errorUrls.add(link);
+                   result = false;
+                   break;
+           }
         }
-        return new Pair(result, errorUrls);
+        return new Triplet(result, errorUrls, warnUrls);
+    }
+
+    enum UrlStatus {
+        OK, WARN, ERROR;
+    }
+
+    /**
+     * Check whether the specified string URL is ok.
+     * @param link The URL that shall be checked.
+     * @return OK: Everything is fine.
+     * WARN: Some exception occurred, the URL may be fine.
+     * ERROR: The URL is not ok.
+     */
+    static UrlStatus isLinkOk(String link){
+        try {
+            URL url = new URL(link);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            TrustModifier.relaxHostChecking(connection);
+            connection.setDoOutput(true);
+            CookieHandler.setDefault(new CookieManager(null, CookiePolicy.ACCEPT_ALL));
+            int responseCode = connection.getResponseCode();
+            if (responseCode != HttpURLConnection.HTTP_OK
+                    && responseCode != HttpURLConnection.HTTP_MOVED_PERM
+                    && responseCode != HttpURLConnection.HTTP_MOVED_TEMP
+                    && responseCode != HttpURLConnection.HTTP_FORBIDDEN) {
+                return UrlStatus.ERROR;
+            }
+        } catch (IOException e) {
+            System.out.println("Problematic link: " + link);
+            e.printStackTrace();
+            return UrlStatus.WARN;
+        }
+        return UrlStatus.OK;
     }
 }

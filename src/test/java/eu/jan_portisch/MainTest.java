@@ -1,7 +1,7 @@
 package eu.jan_portisch;
 
 import org.apache.commons.io.FileUtils;
-import org.javatuples.Pair;
+import org.javatuples.Triplet;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -25,7 +25,7 @@ class MainTest {
             int statusCode = catchSystemExit(() -> {
                 Main.main(args1);
             });
-            assertEquals(0, statusCode);
+            assertFalse(statusCode == 0);
         } catch (Exception e) {
             e.printStackTrace();
             fail();
@@ -96,6 +96,7 @@ class MainTest {
             });
             assertEquals(0, statusCode);
         } catch (Exception e) {
+            e.printStackTrace();
             fail();
         }
     }
@@ -141,10 +142,17 @@ class MainTest {
         Set<String> linkSet2 = new HashSet<>();
         linkSet2.add("https://www.jan-portisch.eu/");
         linkSet2.add("https://www.jan-portisch.eu/asdfasfsadfasfasdfasfds");
-        Pair<Boolean, Set<String>> result = Main.isLinkSetOk(linkSet2);
+        Triplet<Boolean, Set<String>, Set<String>> result = Main.isLinkSetOk(linkSet2);
         assertFalse(result.getValue0());
         assertEquals(1, result.getValue1().size());
         assertTrue(result.getValue1().contains("https://www.jan-portisch.eu/asdfasfsadfasfasdfasfds"));
+    }
+
+    @Test
+    void isLinkOk(){
+        assertEquals(Main.UrlStatus.OK, Main.isLinkOk("https://sws.ifi.uio.no/oaei/phenotype/"));
+        assertEquals(Main.UrlStatus.ERROR, Main.isLinkOk("https://www.jan-portisch.eu/DOES_NOT_EXIST"));
+        assertEquals(Main.UrlStatus.OK, Main.isLinkOk("https://databus.dbpedia.org/dbpedia/collections/latest-core"));
     }
 
     /**
@@ -165,4 +173,5 @@ class MainTest {
             return null;
         }
     }
+
 }
