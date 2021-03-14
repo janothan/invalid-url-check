@@ -24,6 +24,6 @@ java -jar <program> -dir <directory/file to be checked>
 ```
 
 If only markdown files (ending with `.md`) shall be checked:
-```
+```bash
 java -jar -<program> <directory/file to be checked> -md
 ```
