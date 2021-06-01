@@ -1,15 +1,11 @@
 package eu.jan_portisch;
 
 import org.apache.commons.cli.*;
-import org.javatuples.Pair;
 import org.javatuples.Triplet;
 import org.nibor.autolink.LinkExtractor;
 import org.nibor.autolink.LinkSpan;
 import org.nibor.autolink.LinkType;
 
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLSession;
 
 import java.io.*;
 import java.net.*;
@@ -34,10 +30,14 @@ public class Main {
         dirOption.setOptionalArg(false);
         Option mdOption = new Option("md", "markdown", false, "Only markdown files will be parsed and only markdown links will be checked.");
         mdOption.setOptionalArg(true);
+        Option excludeOption = new Option("ex", "exclude", true, "Exclude a specific directory.");
+        excludeOption.setOptionalArg(true);
         options.addOption(dirOption);
         options.addOption(mdOption);
+        options.addOption(excludeOption);
 
         String directoryPath;
+        String exclusion = "";
         try {
             CommandLineParser parser = new DefaultParser();
             CommandLine cmd = parser.parse(options, args);
@@ -48,6 +48,9 @@ public class Main {
             } else {
                 // this is required for repeated unit testing
                 isOnlyMarkdownLinks = false;
+            }
+            if (cmd.hasOption("ex")){
+                exclusion = cmd.getOptionValue("ex");
             }
 
         } catch (ParseException | NullPointerException e) {
@@ -68,7 +71,7 @@ public class Main {
             }
         } else {
             // case 2: root is a directory
-            if (!isDirectoryOk(root)) {
+            if (!isDirectoryOk(root, exclusion)) {
                 System.exit(1);
                 return;
             }
@@ -77,17 +80,25 @@ public class Main {
         System.exit(0);
     }
 
+    static boolean isDirectoryOk(File directoryOrFile){
+        return isDirectoryOk(directoryOrFile, "");
+    }
+
     /**
      * Recursively checks all files in the specified directory. The method will check the file, if a file is provided
      * instead of a directory.
      * @param directoryOrFile File or directory.
+     * @param exclude Directory or file name that shall be excluded
      * @return True if file is ok, else false.
      */
-    static boolean isDirectoryOk(File directoryOrFile) {
+    static boolean isDirectoryOk(File directoryOrFile, String exclude) {
         boolean result = true;
         if (directoryOrFile.isDirectory()) {
             for (File file : directoryOrFile.listFiles()) {
-                boolean intermediateResult = isDirectoryOk(file);
+                if(file.getName().equals(exclude)){
+                    continue;
+                }
+                boolean intermediateResult = isDirectoryOk(file, exclude);
                 if (!intermediateResult) {
                     result = false;
                 }
