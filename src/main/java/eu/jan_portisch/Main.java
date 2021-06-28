@@ -34,6 +34,11 @@ public class Main {
      */
     private static final int MAX_RETRIES = 1;
 
+    /**
+     * If true, the console output will be more extensive.
+     */
+    private static boolean debugOutput = false;
+
     public static void main(String[] args) {
         Options options = new Options();
         Option dirOption = new Option("dir", "directory", true, "The directory or file that shall be checked.");
@@ -238,9 +243,11 @@ public class Main {
                     && responseCode != HttpURLConnection.HTTP_FORBIDDEN) {
 
                 if(trial < MAX_RETRIES) {
-                    System.out.printf("A problem occurred with link: %s\nSleep for %s seconds and retry.\n",
-                            link,
-                            RETRY_TIME_SECONDS);
+                    if(debugOutput) {
+                        System.out.printf("A problem occurred with link: %s\nSleep for %s seconds and retry.\n",
+                                link,
+                                RETRY_TIME_SECONDS);
+                    }
                     try {
                         Thread.sleep(RETRY_TIME_SECONDS * 1000);
                         return isLinkOk(link, ++trial);
