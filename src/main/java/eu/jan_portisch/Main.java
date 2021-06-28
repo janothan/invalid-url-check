@@ -24,6 +24,16 @@ public class Main {
      */
     private static boolean isOnlyMarkdownLinks = false;
 
+    /**
+     * The amount of time to wait before the link again (in seconds).
+     */
+    private static final int RETRY_TIME_SECONDS = 3;
+
+    /**
+     * The maximum number of retries.
+     */
+    private static final int MAX_RETRIES = 1;
+
     public static void main(String[] args) {
         Options options = new Options();
         Option dirOption = new Option("dir", "directory", true, "The directory or file that shall be checked.");
@@ -203,6 +213,10 @@ public class Main {
         OK, WARN, ERROR;
     }
 
+    static UrlStatus isLinkOk(String link){
+        return isLinkOk(link, 0);
+    }
+
     /**
      * Check whether the specified string URL is ok.
      * @param link The URL that shall be checked.
@@ -210,7 +224,7 @@ public class Main {
      * WARN: Some exception occurred, the URL may be fine.
      * ERROR: The URL is not ok.
      */
-    static UrlStatus isLinkOk(String link){
+    static UrlStatus isLinkOk(String link, int trial){
         try {
             URL url = new URL(link);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -222,7 +236,21 @@ public class Main {
                     && responseCode != HttpURLConnection.HTTP_MOVED_PERM
                     && responseCode != HttpURLConnection.HTTP_MOVED_TEMP
                     && responseCode != HttpURLConnection.HTTP_FORBIDDEN) {
-                return UrlStatus.ERROR;
+
+                if(trial < MAX_RETRIES) {
+                    System.out.printf("A problem occurred with link: %s\nSleep for %s seconds and retry.\n",
+                            link,
+                            RETRY_TIME_SECONDS);
+                    try {
+                        Thread.sleep(RETRY_TIME_SECONDS * 1000);
+                        return isLinkOk(link, ++trial);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        return UrlStatus.ERROR;
+                    }
+                } else {
+                    return UrlStatus.ERROR;
+                }
             }
         } catch (IOException e) {
             System.out.println("Problematic link: " + link);
