@@ -27,12 +27,12 @@ public class Main {
     /**
      * The amount of time to wait before the link again (in seconds).
      */
-    private static final int RETRY_TIME_SECONDS = 3;
+    private static final int RETRY_TIME_SECONDS = 4;
 
     /**
      * The maximum number of retries.
      */
-    private static final int MAX_RETRIES = 2;
+    private static final int MAX_RETRIES = 5;
 
     /**
      * If true, the console output will be more extensive.

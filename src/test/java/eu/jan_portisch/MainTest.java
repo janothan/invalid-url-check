@@ -2,6 +2,7 @@ package eu.jan_portisch;
 
 import org.apache.commons.io.FileUtils;
 import org.javatuples.Triplet;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -14,6 +15,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class MainTest {
 
+
+    @Test
+    @Disabled
+    void checkLink(){
+        assertEquals(Main.UrlStatus.OK, Main.isLinkOk("http://www.jan-portisch.eu"));
+    }
 
     @Test
     void checkProblematicDirMainMd(){
