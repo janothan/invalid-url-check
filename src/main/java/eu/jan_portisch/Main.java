@@ -32,7 +32,7 @@ public class Main {
     /**
      * The maximum number of retries.
      */
-    private static final int MAX_RETRIES = 1;
+    private static final int MAX_RETRIES = 2;
 
     /**
      * If true, the console output will be more extensive.
